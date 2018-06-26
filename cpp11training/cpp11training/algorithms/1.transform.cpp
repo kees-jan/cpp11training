@@ -3,12 +3,15 @@
 #include <gtest/gtest.h>
 #include <vector>
 #include <unordered_map>
+#include <range/v3/all.hpp>
 
-TEST(apply_transform, DISABLED_basic_arithmetic)
+TEST(apply_transform, basic_arithmetic)
 {
     const std::vector<int> xs{ {2, 5, 10, 40} };
 
-    std::vector<int> squares;
+    auto squares =
+        xs | ranges::view::transform([](auto i) { return i * i; })
+           | ranges::to_<std::vector>();
 
     // TODO: use algorithms to calculate the square of each element
     ASSERT_EQ(xs.size(), squares.size());
