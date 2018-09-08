@@ -8,16 +8,15 @@ Exercises to train your C++11/14 (and then some).
 
 ### Linux
 
-On Linux all you need is a compiler with C++14 support
-
-    export CXXFLAGS=-std=c++14
+On Linux all you need is a compiler with C++14 support, and CMake, and conan (so... python3 and pip)
 
     git clone git@github.com:xtofl/cpp11training
-    cd cpp11training/cpp11training
     mkdir build
     cd build
-    cmake -DCMAKE_BUILD_TYPE=Debug ..
-    make -j $(nproc)
+    conan install ..
+    cmake ..
+
+    make
 
 
 
