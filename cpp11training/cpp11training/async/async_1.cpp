@@ -90,7 +90,7 @@ namespace myasync {
     };
 
     auto get(TheWeb &web, const std::string &url) {
-		return std::async(std::launch::async, [&web, &url]() { return web.get(url); });
+		return std::async(std::launch::async, [&web, url]() { return web.get(url); });
     }
 
     auto get(TheWeb &web, const std::string &url, TheWeb::Args args) {
