@@ -90,7 +90,7 @@ namespace myasync {
     };
 
     auto get(TheWeb &web, const std::string &url) {
-        return web.get(url);
+		return std::async(std::launch::async, [&web, &url]() { return web.get(url); });
     }
 
     auto get(TheWeb &web, const std::string &url, TheWeb::Args args) {
@@ -100,14 +100,18 @@ namespace myasync {
     template<typename T>
     auto wait_for(const T &t) {}
 
-    auto get_three_urls() {
-        TheWeb theWeb;
-        return std::vector{ { // look mom!  no template arguments!
-            get(theWeb, "url1"),
-            get(theWeb, "url2"),
-            get(theWeb, "url3") } };
-    }
+	auto get_three_urls() {
+		TheWeb theWeb;
+		auto w1 = get(theWeb, "url1");
+		auto w2 = get(theWeb, "url2");
+		auto w3 = get(theWeb, "url3");
 
+		return std::vector{ // look mom!  no template arguments!
+			w1.get(),
+			w2.get(),
+			w3.get()
+		};
+	}
     template<class Urls>
     auto get_parallel(TheWeb &web, const Urls &urls)
     {
@@ -120,7 +124,7 @@ namespace myasync {
     }
 }
 
-TEST(AsyncTest, DISABLED_we_can_delegate_stuff)
+TEST(AsyncTest, we_can_delegate_stuff)
 {
     // TODO: tweak get_three_urls in order to start retrieving all
     // urls simultaneously
@@ -130,11 +134,11 @@ TEST(AsyncTest, DISABLED_we_can_delegate_stuff)
 
 template<typename Document>
 auto spellcheck(TheWeb &theWeb, Document document) {
-    auto corrected = myasync::get(theWeb, "http://spell_checker.com", { { "text", document } });
+    auto corrected = myasync::get(theWeb, "http://spell_checker.com", { { "text", document.get() } });
     return corrected;
 }
 
-TEST(AsyncTest, DISABLED_we_can_wait_for_delegated_stuff)
+TEST(AsyncTest, we_can_wait_for_delegated_stuff)
 {
     // TODO: adapt `spellcheck` so that it waits for the result of the `get` call
     // HINT: `get` should return a future, `spellcheck` should await it
