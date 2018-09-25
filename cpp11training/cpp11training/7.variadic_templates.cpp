@@ -5,14 +5,13 @@
 // TODO: alter a function template to return the number of arguments passed.
 // GOAL: be able to specify a variadic function template and use the sizeof... operator
 // GRADE: ENTRY
-// #define i_can_specify_a_variadic_function_template
+#define i_can_specify_a_variadic_function_template
 #ifdef i_can_specify_a_variadic_function_template
-template<typename T1 = int, typename T2 = int, typename T3 = int>
-size_t count_args(T1 = T1{}, T2 = T2{}, T3 = T3{}) { return 0; }
+template<typename... Ts>
+size_t count_args(Ts... Vs) { return sizeof...(Ts); }
 
 TEST(variadic, we_can_count_arguments)
 {
-
     EXPECT_EQ(2u, count_args(1, 2));
     EXPECT_EQ(3u, count_args('one', 2.0, 3));
 }
@@ -21,13 +20,13 @@ TEST(variadic, we_can_count_arguments)
 // TODO: alter the class template to know its number of arguments
 // GOAL: be able to specify a variadic class template and use the sizeof... operator
 // GRADE: ENTRY
-//#define i_can_specify_a_variadic_class_template
+#define i_can_specify_a_variadic_class_template
 #ifdef i_can_specify_a_variadic_class_template
 
-template<typename T1 = int, typename T2 = int, typename T3 = int>
+template<typename... Ts>
 struct CountArgs
 {
-    static constexpr size_t value = 0;
+    static constexpr size_t value = sizeof...(Ts);
 };
 
 TEST(variadic, we_can_count_arguments2)
@@ -38,7 +37,37 @@ TEST(variadic, we_can_count_arguments2)
 #endif
 
 namespace {
-    auto add5 = [](auto t) { return t; };
+    // auto add5 = [](auto t) { return t; };
+
+	template<int n, typename T>
+	struct add_five_helper
+	{
+		static void help(T& t)
+		{
+			std::get<n>(t) += 5;
+			add_five_helper<n - 1, T>::help(t);
+
+		}
+
+	};
+
+	template<typename T>
+	struct add_five_helper<0, T>
+	{
+		static void help(T& in)
+		{
+		}
+	};
+
+	template<typename T>
+	T add5(T t)
+	{
+		add_five_helper<std::tuple_size<T>::value-1, T>::help(t);
+		return t;
+	}
+
+
+
 }
 TEST(tuples, DISABLED_i_can_transform_all_elements_of_a_tuple) {
     // TODO: make `add5` process each element of the `input` tuple
