@@ -165,11 +165,12 @@ TEST(AsyncTest, we_can_delegate_a_variable_amount_of_stuff)
     EXPECT_GT(2 * 1000_ms, duration([&] {myasync::get_parallel(theWeb, urls); }, 1));
 }
 
-TEST(AsyncTest, DISABLED_we_can_delay_execution_till_input_is_known)
+TEST(AsyncTest, we_can_delay_execution_till_input_is_known)
 {
     TheWeb::Events events;
 
-    const auto processing_task = [&](int size) {
+    const auto processing_task = [&](std::future<int> future_size) {
+		auto size = future_size.get();
         events.push({ "task: n received: " + std::to_string(size), "" });
         for (int i = 0; i != size; ++i) {
             std::this_thread::sleep_for(100_ms);
@@ -177,8 +178,8 @@ TEST(AsyncTest, DISABLED_we_can_delay_execution_till_input_is_known)
         events.push({ "task returns " + std::to_string(size), "" });
         return size;
     };
-    int input = 0;
-    auto set_input = [&](auto i) { input = i; };
+	std::promise<int> input;
+    auto set_input = [&](auto i) { input.set_value(i); };
 
     // TODO: alter/wrap above `processing_task` and `input` so that
     // it waits for its `size` argument,
@@ -187,7 +188,7 @@ TEST(AsyncTest, DISABLED_we_can_delay_execution_till_input_is_known)
     // PURPOSE: learn to use your own Async Provider
 
     auto result_fut = std::async(std::launch::async,
-        processing_task, input);
+        processing_task, input.get_future());
 
     auto input_defined = std::async(std::launch::async, [&] {
         std::this_thread::sleep_for(1000_ms);
