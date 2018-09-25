@@ -182,20 +182,66 @@ TEST(variadic_monad, flatten_operation)
 // representing a predicate for presence in a compile-time list
 // HINT: contained_by()( anything ) will return false.
 // GRADE: INTERMEDIATE
+template<typename T1, typename T2>
+bool matches(T1 v1, T2 v2)
+{
+	return false;
+}
+
+template<typename T>
+bool matches(T v1, T v2)
+{
+	return v1 == v2;
+}
+
+template<typename ...Ts>
+class ContainedBy
+{
+public:
+	ContainedBy(Ts... ts)
+		: all(std::make_tuple(ts...))
+	{}
+
+	template<typename T>
+	bool operator()(T v)
+	{
+		return match_impl(v, std::make_index_sequence<sizeof...(Ts)>());
+	}
+
+	template <typename T>
+	constexpr auto match_impl(T t, std::index_sequence<>)
+	{
+		return false; 
+	}
+
+	template <typename T, size_t I, size_t... Is>
+	constexpr auto match_impl(T t, std::index_sequence<I, Is...> sequence)
+	{
+		return  matches(t, std::get<I>(all)) ||
+			match_impl(t, std::index_sequence<Is...>());
+	}
+
+	template <class Tuple>
+	constexpr auto add5(Tuple t) {
+		return ;
+	}
+
+private:
+	std::tuple<Ts...> all;
+};
+
 template<typename ...Ts>
 auto contained_by(Ts&&...ts)
 {
-    return [](auto x)
-    {
-        return false;
-    };
+	return ContainedBy(ts...);
 }
 
-TEST(variadic_templates, DISABLED_create_a_compile_time_list_lookup)
+TEST(variadic_templates, create_a_compile_time_list_lookup)
 {
     auto in_list = contained_by(1, 2, 3, 4);
     EXPECT_TRUE(in_list(1));
     EXPECT_FALSE(in_list(0));
+	EXPECT_FALSE(in_list(1.0));
 }
 
 template<typename F, typename A, typename T, typename ...Ts>
