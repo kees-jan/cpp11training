@@ -37,39 +37,49 @@ TEST(variadic, we_can_count_arguments2)
 #endif
 
 namespace {
-    // auto add5 = [](auto t) { return t; };
 
-	template<int n, typename T>
-	struct add_five_helper
+	//template<int n, typename T>
+	//struct add_five_helper
+	//{
+	//	static void help(T& t)
+	//	{
+	//		std::get<n>(t) += 5;
+	//		add_five_helper<n - 1, T>::help(t);
+
+	//	}
+
+	//};
+
+	//template<typename T>
+	//struct add_five_helper<0, T>
+	//{
+	//	static void help(T& in)
+	//	{
+	//	}
+	//};
+
+	//template<typename T>
+	//T add5(T t)
+	//{
+	//	add_five_helper<std::tuple_size<T>::value-1, T>::help(t);
+	//	return t;
+	//}
+
+	//auto add5 = [](auto t) { return t; };
+
+	template <class Tuple, size_t... Is>
+	constexpr auto add5_impl(Tuple t, std::index_sequence<Is...>) 
 	{
-		static void help(T& t)
-		{
-			std::get<n>(t) += 5;
-			add_five_helper<n - 1, T>::help(t);
-
-		}
-
-	};
-
-	template<typename T>
-	struct add_five_helper<0, T>
-	{
-		static void help(T& in)
-		{
-		}
-	};
-
-	template<typename T>
-	T add5(T t)
-	{
-		add_five_helper<std::tuple_size<T>::value-1, T>::help(t);
-		return t;
+		return std::make_tuple((std::get<Is>(t)+5)...);
 	}
 
-
+	template <class Tuple>
+	constexpr auto add5(Tuple t) {
+		return add5_impl(t, std::make_index_sequence<std::tuple_size<Tuple>::value>{});
+	}
 
 }
-TEST(tuples, DISABLED_i_can_transform_all_elements_of_a_tuple) {
+TEST(tuples, i_can_transform_all_elements_of_a_tuple) {
     // TODO: make `add5` process each element of the `input` tuple
     // to generate a new tuple where each element is 5 bigger
     // GOAL: learn to use pack expansion in function arguments
