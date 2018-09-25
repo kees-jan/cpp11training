@@ -213,9 +213,26 @@ namespace myasync {
     template<typename F>
     Waitable for_n(int N, F f)
     {
+		std::vector<std::promise<void>> promises(N+1);
+		std::vector<std::future<void>> futures(N + 1);
+		for (auto i = 0; i < N; i++)
+			futures[i + 1] = promises[i].get_future();
+		std::promise<void> start;
+		futures[0] = start.get_future();
+		
         for (auto i = 0; i != N; ++i) {
-           std::thread(f).detach();
+			std::thread(
+				[predecessor = std::move(futures[i]), successor = std::move(promises[i]), f] () mutable
+            {
+				predecessor.get();
+			    f();
+			    successor.set_value();
+
+			}).detach();
         }
+		start.set_value();
+		futures[N-1].get();
+
         return {};
     };
 }
