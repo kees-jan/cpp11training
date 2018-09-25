@@ -94,12 +94,45 @@ TEST(tuples, i_can_transform_all_elements_of_a_tuple) {
 }
 
 namespace {
+
+	std::string serialize_one(int i)
+	{
+		std::stringstream ss;
+		ss << "int@" << i;
+		return ss.str();
+	}
+
+	std::string serialize_one(std::string const& s)
+	{
+		std::stringstream ss;
+		ss << "string@'" << s << "'";
+		return ss.str();
+	}
+
+	std::string join(std::string separator)
+	{
+		return std::string();
+	}
+
+	std::string join(std::string separator, std::string element)
+	{
+		return element;
+	}
+
+	template<typename... Ts>
+	std::string join(std::string separator, std::string first, Ts... rest)
+	{
+		return first + separator + join(separator, rest...);
+	}
+
+
     template<typename ...Ts>
-    std::string serialize(Ts ...ts) {
-        return "";
+    std::string serialize(Ts ...ts) 
+	{
+		return join(", ", serialize_one(ts)...);
     }
 }
-TEST(serialization, DISABLED_serialize_different_types)
+TEST(serialization, serialize_different_types)
 {
     // TODO: fill in serialize so that the test passes
     // GOAL: get familiar with template parameter packs
@@ -115,11 +148,30 @@ TEST(serialization, DISABLED_serialize_different_types)
 // GOAL: learn to separate iteration from dispatching
 // HINT: the base case is a single vector
 // GRADE: INTERMEDIATE
+
+template<typename... Ts>
+void flatten_add(std::vector<int>& result, int i, Ts... ts)
+{
+	result.push_back(i);
+	if constexpr (0<sizeof...(ts))
+		flatten_add(result, ts...);
+}
+
+template<typename... Ts>
+void flatten_add(std::vector<int>& result, std::vector<int> v, Ts... ts)
+{
+	copy(begin(v), end(v), back_inserter(result));
+	if constexpr (0 < sizeof...(ts))
+		flatten_add(result, ts...);
+}
+
 template<typename ...Ts>
 auto flatten(Ts... ts) {
-    return std::vector<int>();
+	std::vector<int> result;
+	flatten_add(result, ts...);
+    return result;
 }
-TEST(variadic_monad, DISABLED_flatten_operation)
+TEST(variadic_monad, flatten_operation)
 {
     EXPECT_EQ((std::vector<int>{ 1, 2, 3, 4, 5 }),
         (flatten(std::vector<int>({ 1 }), 2, std::vector<int>{ 3, 4, 5 })));
