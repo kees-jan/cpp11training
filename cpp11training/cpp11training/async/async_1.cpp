@@ -115,11 +115,10 @@ namespace myasync {
     template<class Urls>
     auto get_parallel(TheWeb &web, const Urls &urls)
     {
-        std::vector<std::string> result;
-        for (const auto &url : urls)
-        {
-            get(web, url);
-        }
+		std::vector<std::future<std::string>> futures;
+		std::transform(begin(urls), end(urls), back_inserter(futures), [&web](auto url) { return get(web, url); });
+		std::vector<std::string> result;
+		std::transform(begin(futures), end(futures), back_inserter(result), [](auto& f) { return f.get(); });
         return result;
     }
 }
@@ -157,7 +156,7 @@ TEST(AsyncTest, we_can_wait_for_delegated_stuff)
                     .arguments.at("text"));
 }
 
-TEST(AsyncTest, DISABLED_we_can_delegate_a_variable_amount_of_stuff)
+TEST(AsyncTest, we_can_delegate_a_variable_amount_of_stuff)
 {
     TheWeb theWeb;
     // TODO: tweak get_parallel in order to start retrieving all
