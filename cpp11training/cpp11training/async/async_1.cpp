@@ -262,5 +262,5 @@ TEST(AsyncTest, DISABLED_keep_a_loop_going)
     promises[3].set_value(103);
     wait_for(all_done);
     EXPECT_EQ(5, results.size());
-    EXPECT_EQ((std::vector{ { 100, 101, 102, 103, 104 } }), results);
+    EXPECT_EQ((std::vector{ 100, 101, 102, 103, 104 }), results);
 }
