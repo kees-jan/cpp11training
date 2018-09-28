@@ -167,77 +167,83 @@ TEST(AsyncTest, we_can_delegate_a_variable_amount_of_stuff)
 
 TEST(AsyncTest, we_can_delay_execution_till_input_is_known)
 {
-    TheWeb::Events events;
+  TheWeb::Events events;
 
-    const auto processing_task = [&](std::future<int> future_size) {
-		auto size = future_size.get();
-        events.push({ "task: n received: " + std::to_string(size), "" });
-        for (int i = 0; i != size; ++i) {
-            std::this_thread::sleep_for(100_ms);
-        }
-        events.push({ "task returns " + std::to_string(size), "" });
-        return size;
-    };
-	std::promise<int> input;
-    auto set_input = [&](auto i) { input.set_value(i); };
+  const auto processing_task = [&](std::future<int> future_size) {
+    auto size = future_size.get();
+    events.push({ "task: n received: " + std::to_string(size), "" });
+    for (int i = 0; i != size; ++i) {
+      std::this_thread::sleep_for(100_ms);
+    }
+    events.push({ "task returns " + std::to_string(size), "" });
+    return size;
+  };
+  std::promise<int> input;
+  auto set_input = [&](auto i) { input.set_value(i); };
 
-    // TODO: alter/wrap above `processing_task` and `input` so that
-    // it waits for its `size` argument,
-    // and that client code can wait for its return value.
-    // HINT: ... accept and return a future, store the result in a promise.
-    // PURPOSE: learn to use your own Async Provider
+  // TODO: alter/wrap above `processing_task` and `input` so that
+  // it waits for its `size` argument,
+  // and that client code can wait for its return value.
+  // HINT: ... accept and return a future, store the result in a promise.
+  // PURPOSE: learn to use your own Async Provider
 
-    auto result_fut = std::async(std::launch::async,
-        processing_task, input.get_future());
+  auto result_fut = std::async(std::launch::async,
+                               processing_task, input.get_future());
 
-    auto input_defined = std::async(std::launch::async, [&] {
-        std::this_thread::sleep_for(1000_ms);
-        events.push({ "input defined", "" });
-        set_input(10);
+  auto input_defined = std::async(std::launch::async, [&] {
+      std::this_thread::sleep_for(1000_ms);
+      events.push({ "input defined", "" });
+      set_input(10);
     });
 
-    input_defined.wait();
-    const auto result = result_fut.get();
-    events.push({ "return value known: " + std::to_string(result), "" });
+  input_defined.wait();
+  const auto result = result_fut.get();
+  events.push({ "return value known: " + std::to_string(result), "" });
 
-    EXPECT_EQ(10, result);
-    EXPECT_TRUE(events.ordered(
-        { "input defined", "" },
-        { "task: n received: 10", "" }));
-    EXPECT_TRUE(events.ordered(
-        { "task returns 10", "" },
-        { "return value known: 10", "" }));
+  EXPECT_EQ(10, result);
+  EXPECT_TRUE(events.ordered(
+                             { "input defined", "" },
+                             { "task: n received: 10", "" }));
+  EXPECT_TRUE(events.ordered(
+                             { "task returns 10", "" },
+                             { "return value known: 10", "" }));
 }
 
 namespace myasync {
-    template<typename F>
-    Waitable for_n(int N, F f)
-    {
-		std::vector<std::promise<void>> promises(N+1);
-		std::vector<std::future<void>> futures(N + 1);
-		for (auto i = 0; i < N; i++)
-			futures[i + 1] = promises[i].get_future();
-		std::promise<void> start;
-		futures[0] = start.get_future();
+  template<typename F>
+  std::future<void> for_n(int N, F f)
+  {
+    return std::async
+      ([=]{
+    
+        std::promise<void> start;
+        start.set_value();
+        std::future<void> predecessor=start.get_future();
+        predecessor.wait();
 		
-        for (auto i = 0; i != N; ++i) {
-			std::thread(
-				[predecessor = std::move(futures[i]), successor = std::move(promises[i]), f] () mutable
-            {
-				predecessor.get();
-			    f();
-			    successor.set_value();
+        for (auto i = 0; i != N; ++i)
+        {
+          std::promise<void> current;
+          std::future<void> next = current.get_future();
+      
+          std::thread(
+                      [pred = std::move(predecessor), successor = std::move(current), f] () mutable
+                      {
+                        pred.wait();
+                        f();
+                        successor.set_value();
 
-			}).detach();
+                      }).detach();
+
+          predecessor = std::move(next);
         }
-		start.set_value();
-		futures[N-1].get();
 
-        return {};
-    };
+        predecessor.wait();
+      });
+  };
 }
 
-TEST(AsyncTest, DISABLED_keep_a_loop_going)
+TEST(AsyncTest, keep_a_loop_going)
 {
     // TODO: change the `myasync::for_n` function to keep
     // repeating its argument function N times, asynchronously
@@ -260,7 +266,7 @@ TEST(AsyncTest, DISABLED_keep_a_loop_going)
     promises[2].set_value(102);
     promises[1].set_value(101);
     promises[3].set_value(103);
-    wait_for(all_done);
+    all_done.wait();
     EXPECT_EQ(5, results.size());
     EXPECT_EQ((std::vector{ 100, 101, 102, 103, 104 }), results);
 }
