@@ -13,7 +13,7 @@ size_t count_args(Ts... Vs) { return sizeof...(Ts); }
 TEST(variadic, we_can_count_arguments)
 {
     EXPECT_EQ(2u, count_args(1, 2));
-    EXPECT_EQ(3u, count_args('one', 2.0, 3));
+    EXPECT_EQ(3u, count_args("one", 2.0, 3));
 }
 #endif
 
@@ -149,20 +149,24 @@ TEST(serialization, serialize_different_types)
 // HINT: the base case is a single vector
 // GRADE: INTERMEDIATE
 
+void flatten_add(std::vector<int>& result)
+{}
+
+template<typename... Ts>
+void flatten_add(std::vector<int>& result, std::vector<int> v, Ts... ts);
+
 template<typename... Ts>
 void flatten_add(std::vector<int>& result, int i, Ts... ts)
 {
 	result.push_back(i);
-	if constexpr (0<sizeof...(ts))
-		flatten_add(result, ts...);
+	flatten_add(result, ts...);
 }
 
 template<typename... Ts>
 void flatten_add(std::vector<int>& result, std::vector<int> v, Ts... ts)
 {
 	copy(begin(v), end(v), back_inserter(result));
-	if constexpr (0 < sizeof...(ts))
-		flatten_add(result, ts...);
+	flatten_add(result, ts...);
 }
 
 template<typename ...Ts>
