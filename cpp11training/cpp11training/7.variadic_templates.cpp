@@ -95,42 +95,59 @@ TEST(tuples, i_can_transform_all_elements_of_a_tuple) {
 
 namespace {
 
-	std::string serialize_one(int i)
-	{
-		std::stringstream ss;
-		ss << "int@" << i;
-		return ss.str();
-	}
+  std::string serialize_one(int i)
+  {
+    std::stringstream ss;
+    ss << "int@" << i;
+    return ss.str();
+  }
 
-	std::string serialize_one(std::string const& s)
-	{
-		std::stringstream ss;
-		ss << "string@'" << s << "'";
-		return ss.str();
-	}
+  std::string serialize_one(std::string const& s)
+  {
+    std::stringstream ss;
+    ss << "string@'" << s << "'";
+    return ss.str();
+  }
 
-	std::string join(std::string separator)
-	{
-		return std::string();
-	}
+  std::string join(std::string separator)
+  {
+    return std::string();
+  }
 
-	std::string join(std::string separator, std::string element)
-	{
-		return element;
-	}
+  template<typename T>
+  std::string join(std::string separator, T element)
+  {
+    std::stringstream ss;
+    ss << element;
+    return ss.str();
+  }
 
-	template<typename... Ts>
-	std::string join(std::string separator, std::string first, Ts... rest)
-	{
-		return first + separator + join(separator, rest...);
-	}
+  template<typename T, typename... Ts>
+  std::string join(std::string separator, T first, Ts... rest)
+  {
+    std::stringstream ss;
+    ss << first << separator << join(separator, rest...);
+    return ss.str();
+  }
 
+  template<typename Iterator>
+  std::string join_range(std::string separator, const Iterator& begin, const Iterator& end)
+  {
+    std::stringstream ss;
+    auto cur = begin;
+    if(cur != end)
+      ss << *cur++;
+    for(;cur!=end;++cur)
+      ss << separator << *cur;
 
-    template<typename ...Ts>
-    std::string serialize(Ts ...ts) 
-	{
-		return join(", ", serialize_one(ts)...);
-    }
+    return ss.str();
+  }
+
+  template<typename ...Ts>
+  std::string serialize(Ts ...ts) 
+  {
+    return join(", ", serialize_one(ts)...);
+  }
 }
 TEST(serialization, serialize_different_types)
 {
@@ -285,14 +302,32 @@ TEST(variadic_tuple_iteration, DISABLED_we_can_transform_an_indexed_tuple) {
     EXPECT_EQ(3, std::get<1>(result));
     EXPECT_EQ(4, std::get<2>(result));
 }
-auto product = [](auto... functions)
+
+template<typename... Ts>
+void add_rows(std::vector<std::string>& rows, auto fs, std::index_sequence<>, Ts... arguments)
 {
-    return [](auto ...arguments) {
-        return std::string{ "not implemented" };
-    };
 };
 
-TEST(composition, DISABLED_print_a_matrix)
+template<size_t I, size_t... Is>
+void add_rows(std::vector<std::string>& rows, auto fs, std::index_sequence<I, Is...>, auto... arguments)
+{
+  rows.push_back(join(", ", std::get<I>(fs)(arguments)...));
+  add_rows(rows, fs, std::index_sequence<Is...>(), arguments...);
+};
+
+auto product(auto... functions)
+{
+  auto fs = std::make_tuple(functions...);
+  auto i = std::make_index_sequence<sizeof...(functions)>();
+  
+  return [=](auto... arguments) {
+    std::vector<std::string> rows;
+    add_rows(rows, fs, i, arguments...);
+    return join_range("\n", rows.begin(), rows.end());
+  };
+};
+
+TEST(composition, print_a_matrix)
 {
 
     // this exercise will take some more time...
